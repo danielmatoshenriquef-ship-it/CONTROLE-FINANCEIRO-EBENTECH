@@ -249,6 +249,44 @@
     .settings-row p { margin-top: 3px; color: var(--muted); font-size: 13px; }
     .danger-zone { border-color: #efccd0; }
     .danger-zone .card-head { color: var(--red); }
+    .license-device-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+    .device-code-inline { display: block; margin-top: 8px; color: var(--navy); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 14px; font-weight: 800; letter-spacing: .035em; overflow-wrap: anywhere; }
+
+    body.license-locked { overflow: hidden; padding-bottom: 0 !important; }
+    body.license-locked > .app,
+    body.license-locked > .quick-entry-menu,
+    body.license-locked > .mobile-add,
+    body.license-locked > dialog,
+    body.license-locked > .toast { visibility: hidden; }
+    .license-gate {
+      position: fixed; z-index: 1000; inset: 0; min-height: 100svh; padding: max(22px, env(safe-area-inset-top)) 18px max(22px, env(safe-area-inset-bottom));
+      display: grid; place-items: center; overflow-y: auto;
+      background:
+        radial-gradient(circle at 15% 10%, rgba(56, 198, 147, .2), transparent 28%),
+        radial-gradient(circle at 90% 85%, rgba(36, 105, 177, .2), transparent 30%),
+        linear-gradient(150deg, #0c1d34, #173657 62%, #10233f);
+    }
+    .license-gate[hidden] { display: none; }
+    .license-panel {
+      width: min(500px, 100%); padding: clamp(25px, 5vw, 40px); border: 1px solid rgba(255,255,255,.16); border-radius: 26px;
+      color: #fff; background: rgba(13, 29, 50, .88); box-shadow: 0 30px 90px rgba(0,0,0,.36); backdrop-filter: blur(14px); text-align: center;
+    }
+    .license-brand { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 26px; font-weight: 850; }
+    .license-brand-mark { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: linear-gradient(145deg, #38c693, #14916a); box-shadow: 0 8px 24px rgba(13,149,103,.28); }
+    .license-state-icon { width: 64px; height: 64px; margin: 0 auto 18px; border-radius: 21px; display: grid; place-items: center; color: #fff; background: rgba(255,255,255,.1); font-size: 28px; font-weight: 900; }
+    .license-state-icon.checking { animation: licenseSpin 1s linear infinite; }
+    .license-state-icon.pending { color: #ffe4a7; background: rgba(192,121,22,.22); }
+    .license-state-icon.blocked, .license-state-icon.offline { color: #ffd5da; background: rgba(207,63,79,.24); }
+    @keyframes licenseSpin { to { transform: rotate(360deg); } }
+    .license-kicker { margin-bottom: 7px; color: #76dfbb; font-size: 12px; font-weight: 850; letter-spacing: .11em; text-transform: uppercase; }
+    .license-panel h1 { font-size: clamp(26px, 6vw, 34px); }
+    .license-message { margin-top: 13px; color: #c7d5e3; }
+    .license-code-box { margin-top: 24px; padding: 15px; border: 1px solid rgba(255,255,255,.14); border-radius: 15px; background: rgba(0,0,0,.16); }
+    .license-code-box small { display: block; margin-bottom: 7px; color: #aebed0; }
+    .license-code { display: block; color: #fff; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: clamp(14px, 4vw, 18px); font-weight: 900; letter-spacing: .05em; overflow-wrap: anywhere; user-select: all; }
+    .license-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 14px; }
+    .license-actions .btn { width: 100%; }
+    .license-help { min-height: 20px; margin-top: 17px; color: #9fb1c4; font-size: 13px; }
 
     dialog { width: min(560px, calc(100vw - 26px)); max-height: min(88vh, 760px); border: 0; border-radius: 20px; padding: 0; color: var(--ink); box-shadow: 0 30px 90px rgba(0,0,0,.28); overflow: hidden; }
     dialog::backdrop { background: rgba(8, 18, 31, .6); backdrop-filter: blur(3px); }
@@ -345,8 +383,27 @@
     }
   </style>
 </head>
-<body>
-  <div class="app">
+<body class="license-locked">
+  <section class="license-gate" id="licenseGate" role="dialog" aria-modal="true" aria-labelledby="licenseTitle">
+    <div class="license-panel">
+      <div class="license-brand"><span class="license-brand-mark">$</span><span>Minhas Finanças</span></div>
+      <div class="license-state-icon checking" id="licenseStateIcon" aria-hidden="true">↻</div>
+      <p class="license-kicker">Acesso por aparelho</p>
+      <h1 id="licenseTitle">Verificando este aparelho</h1>
+      <p class="license-message" id="licenseMessage" aria-live="polite">Aguarde enquanto confirmamos a autorização.</p>
+      <div class="license-code-box" id="licenseCodeBox" hidden>
+        <small>Código deste aparelho</small>
+        <code class="license-code" id="licenseDeviceCode"></code>
+        <div class="license-actions">
+          <button class="btn light" type="button" id="copyLicenseCode">Copiar código</button>
+          <button class="btn green" type="button" id="retryLicense">Verificar acesso</button>
+        </div>
+      </div>
+      <p class="license-help" id="licenseHelp">Seus dados financeiros permanecem salvos somente neste aparelho.</p>
+    </div>
+  </section>
+
+  <div class="app" aria-hidden="true">
     <aside class="sidebar" aria-label="Menu principal">
       <div class="brand">
         <div class="brand-mark">$</div>
@@ -488,6 +545,13 @@
               <p class="helper" id="lastBackupLabel" style="margin-top:13px">Nenhum backup feito neste navegador.</p>
             </div>
           </article>
+          <article class="card span-2">
+            <div class="card-head"><h2>Acesso deste aparelho</h2><span class="status paid" id="licenseStatusBadge">Autorizado</span></div>
+            <div class="card-body license-device-row">
+              <div><strong id="licenseDeviceLabel">Aparelho autorizado</strong><p class="muted small-text" id="licenseValidationText">A autorização funciona offline por até 30 dias.</p><code class="device-code-inline" id="settingsLicenseCode"></code></div>
+              <button class="btn light small" type="button" id="copySettingsLicenseCode">Copiar código</button>
+            </div>
+          </article>
           <article class="card danger-zone span-2">
             <div class="card-head"><h2>Apagar todos os dados</h2></div>
             <div class="card-body" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap"><p class="muted">Remove definitivamente lançamentos, contas, reservas e configurações deste navegador.</p><button class="btn danger" type="button" id="clearData">Apagar tudo</button></div>
@@ -609,10 +673,14 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script>
-    (() => {
+    (async () => {
       'use strict';
 
       const STORAGE_KEY = 'minhas_financas_offline_v1';
+      const DEVICE_KEY = 'minhas_financas_device_v1';
+      const LICENSE_CACHE_KEY = 'minhas_financas_license_v1';
+      const LICENSE_VALIDATION_DAYS = 30;
+      const LICENSE_VALIDATION_MS = LICENSE_VALIDATION_DAYS * 24 * 60 * 60 * 1000;
       const CATEGORIES = ['Casa','Carro','Alimentação','Lazer','Despesas médicas','Outros'];
       const PAGE_TITLES = { dashboard: 'Visão geral', transactions: 'Lançamentos', bills: 'Contas a pagar', cards: 'Cartões de crédito', savings: 'Dinheiro guardado', reports: 'Relatórios', settings: 'Ajustes' };
       const DEFAULT_STATE = {
@@ -631,6 +699,8 @@
       let confirmAction = null;
       let toastTimer = null;
       let deferredInstallPrompt = null;
+      let currentDeviceCode = '';
+      let currentLicense = null;
 
       function clone(value) { return JSON.parse(JSON.stringify(value)); }
       function normalizeState(data) {
@@ -652,6 +722,124 @@
       function saveState() {
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
         catch (error) { showToast('Não foi possível salvar no navegador. Verifique o espaço disponível.', true); }
+      }
+      function generateDeviceCode() {
+        if (!window.crypto?.getRandomValues) throw new Error('Gerador seguro indisponível');
+        const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        const bytes = new Uint8Array(20);
+        window.crypto.getRandomValues(bytes);
+        const value = Array.from(bytes, byte => alphabet[byte % alphabet.length]).join('');
+        return `MF-${value.match(/.{1,4}/g).join('-')}`;
+      }
+      function getOrCreateDeviceCode() {
+        const saved = localStorage.getItem(DEVICE_KEY);
+        if (saved && /^MF-(?:[A-Z2-9]{4}-){4}[A-Z2-9]{4}$/.test(saved)) return saved;
+        const created = generateDeviceCode();
+        localStorage.setItem(DEVICE_KEY, created);
+        return created;
+      }
+      async function hashDeviceCode(code) {
+        if (!window.crypto?.subtle || typeof TextEncoder === 'undefined') throw new Error('Criptografia indisponível');
+        const digest = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(code));
+        return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+      }
+      function readLicenseCache() {
+        try { return JSON.parse(localStorage.getItem(LICENSE_CACHE_KEY) || 'null'); }
+        catch (error) { return null; }
+      }
+      function writeLicenseCache(value) {
+        try { localStorage.setItem(LICENSE_CACHE_KEY, JSON.stringify(value)); }
+        catch (error) {}
+      }
+      function clearLicenseCache() {
+        try { localStorage.removeItem(LICENSE_CACHE_KEY); }
+        catch (error) {}
+      }
+      function setLicenseGateState(kind, title, message, showCode = true) {
+        const icon = document.getElementById('licenseStateIcon');
+        icon.className = `license-state-icon ${kind}`;
+        icon.textContent = kind === 'checking' ? '↻' : kind === 'pending' ? '⌛' : kind === 'blocked' ? '×' : '!';
+        document.getElementById('licenseTitle').textContent = title;
+        document.getElementById('licenseMessage').textContent = message;
+        document.getElementById('licenseCodeBox').hidden = !showCode;
+        document.getElementById('retryLicense').disabled = kind === 'checking';
+      }
+      function unlockLicensedApp() {
+        document.body.classList.remove('license-locked');
+        document.getElementById('licenseGate').hidden = true;
+        document.querySelector('.app').setAttribute('aria-hidden', 'false');
+      }
+      async function copyCurrentDeviceCode(useToast = false) {
+        try {
+          await navigator.clipboard.writeText(currentDeviceCode);
+        } catch (error) {
+          const field = document.createElement('textarea');
+          field.value = currentDeviceCode;
+          field.setAttribute('readonly', '');
+          field.style.position = 'fixed'; field.style.opacity = '0';
+          document.body.appendChild(field); field.select(); document.execCommand('copy'); field.remove();
+        }
+        if (useToast) showToast('Código do aparelho copiado.');
+        else document.getElementById('licenseHelp').textContent = 'Código copiado. Envie-o ao responsável para liberar este aparelho.';
+      }
+      async function validateDeviceAccess() {
+        try {
+          currentDeviceCode = getOrCreateDeviceCode();
+          document.getElementById('licenseDeviceCode').textContent = currentDeviceCode;
+        } catch (error) {
+          setLicenseGateState('blocked', 'Armazenamento indisponível', 'Permita que o navegador salve dados neste aparelho e tente novamente.', false);
+          return false;
+        }
+
+        setLicenseGateState('checking', 'Verificando este aparelho', 'Aguarde enquanto confirmamos a autorização.', false);
+        let deviceHash;
+        try {
+          deviceHash = await hashDeviceCode(currentDeviceCode);
+        } catch (error) {
+          setLicenseGateState('blocked', 'Navegador incompatível', 'Atualize o navegador para realizar a validação segura deste aparelho.');
+          return false;
+        }
+
+        const now = Date.now();
+        const cached = readLicenseCache();
+        try {
+          const response = await fetch(`./authorized-devices.json?check=${now}`, { cache: 'no-store', credentials: 'same-origin' });
+          if (!response.ok) throw new Error(`Falha ${response.status}`);
+          const registry = await response.json();
+          if (!registry || !Array.isArray(registry.devices)) throw new Error('Lista inválida');
+          const entry = registry.devices.find(device => String(device.hash || '').toLowerCase() === deviceHash);
+          const expiresAt = entry?.expiresAt ? Date.parse(entry.expiresAt) : null;
+          if (!entry) {
+            clearLicenseCache();
+            setLicenseGateState('pending', 'Aguardando liberação', 'Este aparelho ainda não foi autorizado. Copie o código abaixo e envie ao responsável.');
+            return false;
+          }
+          if (entry.active !== true || (expiresAt && expiresAt < now)) {
+            clearLicenseCache();
+            setLicenseGateState('blocked', 'Acesso bloqueado', 'A autorização deste aparelho está inativa. Fale com o responsável para solicitar a liberação.');
+            return false;
+          }
+          currentLicense = {
+            deviceHash,
+            label: String(entry.label || 'Aparelho autorizado'),
+            validatedAt: new Date(now).toISOString(),
+            validUntil: new Date(now + LICENSE_VALIDATION_MS).toISOString(),
+            offline: false
+          };
+          writeLicenseCache(currentLicense);
+          unlockLicensedApp();
+          return true;
+        } catch (error) {
+          const validUntil = cached?.deviceHash === deviceHash ? Date.parse(cached.validUntil) : 0;
+          const clockIsValid = !cached?.validatedAt || now >= Date.parse(cached.validatedAt) - 24 * 60 * 60 * 1000;
+          if (validUntil >= now && clockIsValid) {
+            currentLicense = { ...cached, offline: true };
+            unlockLicensedApp();
+            return true;
+          }
+          setLicenseGateState('offline', 'Validação necessária', 'Conecte este aparelho à internet para confirmar o acesso. A validação é necessária a cada 30 dias.');
+          return false;
+        }
       }
       function id(prefix = 'id') { return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,8)}`; }
       function todayISO() {
@@ -967,6 +1155,13 @@
         if (!('Notification' in window)) { notificationButton.textContent = 'Indisponível'; notificationButton.disabled = true; }
         else if (Notification.permission === 'granted') { notificationButton.textContent = 'Ativada'; notificationButton.disabled = true; }
         else if (Notification.permission === 'denied') { notificationButton.textContent = 'Bloqueada'; notificationButton.disabled = true; }
+        document.getElementById('settingsLicenseCode').textContent = currentDeviceCode;
+        document.getElementById('licenseDeviceLabel').textContent = currentLicense?.label || 'Aparelho autorizado';
+        const badge = document.getElementById('licenseStatusBadge');
+        badge.textContent = currentLicense?.offline ? 'Offline autorizado' : 'Autorizado';
+        badge.className = `status ${currentLicense?.offline ? 'open' : 'paid'}`;
+        const validUntil = currentLicense?.validUntil ? new Date(currentLicense.validUntil).toLocaleDateString('pt-BR') : '—';
+        document.getElementById('licenseValidationText').textContent = `${currentLicense?.offline ? 'Sem conexão. ' : ''}Autorização offline válida até ${validUntil}.`;
       }
 
       function renderDueAlert() {
@@ -1506,6 +1701,12 @@
         } catch (error) {}
       }
 
+      document.getElementById('copyLicenseCode').addEventListener('click', () => copyCurrentDeviceCode(false));
+      document.getElementById('retryLicense').addEventListener('click', () => location.reload());
+      if ('serviceWorker' in navigator && location.protocol !== 'file:') window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+      const licensed = await validateDeviceAccess();
+      if (!licensed) return;
+
       document.addEventListener('click', event => {
         const target = event.target.closest('button');
         if (!event.target.closest('#quickEntryMenu') && target?.id !== 'mobileAdd') closeQuickEntryMenu();
@@ -1569,6 +1770,7 @@
       document.getElementById('monthlyLimit').addEventListener('change', event => { state.settings.monthlyLimit = Math.max(0, Number(event.target.value || 0)); saveState(); renderAll(); showToast('Limite mensal atualizado.'); });
       document.getElementById('enableNotifications').addEventListener('click', enableNotifications);
       document.getElementById('installAppButton').addEventListener('click', installApp);
+      document.getElementById('copySettingsLicenseCode').addEventListener('click', () => copyCurrentDeviceCode(true));
       document.getElementById('backupBtn').addEventListener('click', exportBackup);
       document.getElementById('quickBackup').addEventListener('click', exportBackup);
       document.getElementById('restoreBtn').addEventListener('click', () => document.getElementById('restoreFile').click());
@@ -1582,7 +1784,6 @@
       document.querySelectorAll('dialog').forEach(dialog => dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); }));
       window.addEventListener('beforeinstallprompt', event => { event.preventDefault(); deferredInstallPrompt = event; renderSettings(); });
       window.addEventListener('appinstalled', () => { deferredInstallPrompt = null; renderSettings(); showToast('Aplicativo instalado com sucesso.'); });
-      if ('serviceWorker' in navigator && location.protocol !== 'file:') window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 
       const now = new Date();
       document.getElementById('todayLabel').textContent = now.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });

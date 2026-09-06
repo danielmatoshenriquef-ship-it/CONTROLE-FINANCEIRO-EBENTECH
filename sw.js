@@ -1,4 +1,4 @@
-const CACHE_NAME = 'minhas-financas-pwa-v1';
+const CACHE_NAME = 'minhas-financas-pwa-v2';
 const APP_SHELL = [
   './',
   './index.html',
@@ -17,6 +17,11 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
+  const requestUrl = new URL(event.request.url);
+  if (requestUrl.pathname.endsWith('/authorized-devices.json')) {
+    event.respondWith(fetch(event.request, { cache: 'no-store' }));
+    return;
+  }
   if (event.request.mode === 'navigate') {
     event.respondWith(fetch(event.request).then(response => {
       const copy = response.clone();
