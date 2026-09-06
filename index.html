@@ -112,6 +112,11 @@
     .btn.small { min-height: 36px; padding: 0 11px; border-radius: 10px; font-size: 14px; }
     .btn.icon-only { width: 40px; padding: 0; }
     .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .privacy-toggle svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+    .privacy-toggle .eye-off { display: none; }
+    .privacy-toggle.values-hidden { color: #fff; background: var(--navy); border-color: var(--navy); }
+    .privacy-toggle.values-hidden .eye-on { display: none; }
+    .privacy-toggle.values-hidden .eye-off { display: block; }
     .view { display: none; animation: rise .2s ease; }
     .view.active { display: block; }
     @keyframes rise { from { opacity: .5; transform: translateY(4px); } }
@@ -455,6 +460,10 @@
       <header class="topbar">
         <div><p class="page-kicker" id="todayLabel"></p><h1 id="pageTitle">Visão geral</h1></div>
         <div class="top-actions">
+          <button class="btn light icon-only privacy-toggle" type="button" id="toggleValuesButton" title="Ocultar valores" aria-label="Ocultar valores da tela inicial" aria-pressed="false" aria-controls="view-dashboard">
+            <svg class="eye-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"></path><circle cx="12" cy="12" r="2.6"></circle></svg>
+            <svg class="eye-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"></path><circle cx="12" cy="12" r="2.6"></circle><path d="m3 3 18 18"></path></svg>
+          </button>
           <button class="btn light icon-only" type="button" id="quickBackup" title="Baixar backup" aria-label="Baixar backup">⇩</button>
           <button class="btn light desktop-entry" type="button" data-quick-transaction="income">↑ Entrada</button>
           <button class="btn green desktop-entry" type="button" data-quick-transaction="expense">↓ Saída</button>
@@ -733,6 +742,7 @@
       const DEVICE_KEY = 'minhas_financas_device_v1';
       const LICENSE_CACHE_KEY = 'minhas_financas_license_v1';
       const PIN_KEY = 'minhas_financas_pin_v1';
+      const PRIVACY_KEY = 'minhas_financas_privacy_v1';
       const PIN_ITERATIONS = 180000;
       const PIN_BACKGROUND_LOCK_MS = 30 * 1000;
       const LICENSE_VALIDATION_DAYS = 7;
@@ -759,6 +769,7 @@
       let currentLicense = null;
       let pinUnlockResolver = null;
       let appHiddenAt = 0;
+      let valuesHidden = readPrivacySetting();
 
       function clone(value) { return JSON.parse(JSON.stringify(value)); }
       function normalizeState(data) {
@@ -780,6 +791,14 @@
       function saveState() {
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
         catch (error) { showToast('Não foi possível salvar no navegador. Verifique o espaço disponível.', true); }
+      }
+      function readPrivacySetting() {
+        try { return localStorage.getItem(PRIVACY_KEY) === 'hidden'; }
+        catch (error) { return false; }
+      }
+      function savePrivacySetting() {
+        try { localStorage.setItem(PRIVACY_KEY, valuesHidden ? 'hidden' : 'visible'); }
+        catch (error) {}
       }
       function generateDeviceCode() {
         if (!window.crypto?.getRandomValues) throw new Error('Gerador seguro indisponível');
@@ -1071,6 +1090,7 @@
         return Math.round((b-a)/86400000);
       }
       function money(value) { return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+      function dashboardMoney(value) { return valuesHidden ? '••••••' : money(value); }
       function dateBR(value) { return value ? parseDate(value).toLocaleDateString('pt-BR') : '—'; }
       function nextCardDue(dueDay) {
         const today = parseDate(todayISO());
@@ -1230,10 +1250,10 @@
       function renderDashboard() {
         const month = currentMonth();
         const totals = totalsForMonth(month);
-        document.getElementById('statBalance').textContent = money(availableBalance());
-        document.getElementById('statIncome').textContent = money(totals.income);
-        document.getElementById('statExpense').textContent = money(totals.expense);
-        document.getElementById('statSaved').textContent = money(savedTotal());
+        document.getElementById('statBalance').textContent = dashboardMoney(availableBalance());
+        document.getElementById('statIncome').textContent = dashboardMoney(totals.income);
+        document.getElementById('statExpense').textContent = dashboardMoney(totals.expense);
+        document.getElementById('statSaved').textContent = dashboardMoney(savedTotal());
         document.getElementById('statIncomeFoot').textContent = `${totals.incomeCount} ${totals.incomeCount === 1 ? 'lançamento' : 'lançamentos'}`;
         document.getElementById('statExpenseFoot').textContent = `${totals.expenseCount} ${totals.expenseCount === 1 ? 'lançamento' : 'lançamentos'}`;
         document.getElementById('statSavedFoot').textContent = state.vaults.length ? `${state.vaults.length} ${state.vaults.length === 1 ? 'reserva' : 'reservas'}` : 'Nenhuma reserva';
@@ -1243,21 +1263,39 @@
           <div class="list-item">
             <span class="item-badge ${t.type}">${t.type === 'income' ? '↑' : '↓'}</span>
             <div class="item-main"><div class="item-title">${escapeHTML(t.description)}</div><div class="item-meta">${t.type === 'expense' ? escapeHTML(t.category) : 'Entrada'}${t.paymentSource === 'card' ? ` · Cartão ${escapeHTML(t.cardName || 'removido')}` : ''} · ${dateBR(t.date)}</div></div>
-            <div class="item-value ${t.type === 'income' ? 'positive' : 'negative'}">${t.type === 'income' ? '+' : '−'} ${money(t.amount)}</div>
+            <div class="item-value ${t.type === 'income' ? 'positive' : 'negative'}">${t.type === 'income' ? '+' : '−'} ${dashboardMoney(t.amount)}</div>
           </div>`).join('') : emptyHTML('↕', 'Adicione sua primeira receita ou despesa.');
 
         const upcoming = state.bills.filter(b => b.status !== 'paid').sort((a,b) => a.dueDate.localeCompare(b.dueDate)).slice(0,5);
         document.getElementById('upcomingBills').innerHTML = upcoming.length ? upcoming.map(b => {
           const overdue = billStatus(b) === 'overdue';
-          return `<div class="due-item ${overdue ? 'overdue' : ''}"><div class="due-top"><div><strong>${escapeHTML(b.title)}</strong><div class="due-date">${overdue ? 'Venceu em' : 'Vence em'} ${dateBR(b.dueDate)}</div></div>${billAmountHTML(b)}</div><div class="due-actions"><button class="btn small ${overdue ? 'danger' : 'green'}" type="button" data-pay-bill="${b.id}">Marcar paga</button><button class="btn small light" type="button" data-calendar-bill="${b.id}" title="Adicionar ao calendário">Calendário</button></div></div>`;
+          const amount = b.variableAmount && b.status !== 'paid' ? '<span class="muted">A definir</span>' : `<strong>${dashboardMoney(b.amount)}</strong>`;
+          return `<div class="due-item ${overdue ? 'overdue' : ''}"><div class="due-top"><div><strong>${escapeHTML(b.title)}</strong><div class="due-date">${overdue ? 'Venceu em' : 'Vence em'} ${dateBR(b.dueDate)}</div></div>${amount}</div><div class="due-actions"><button class="btn small ${overdue ? 'danger' : 'green'}" type="button" data-pay-bill="${b.id}">Marcar paga</button><button class="btn small light" type="button" data-calendar-bill="${b.id}" title="Adicionar ao calendário">Calendário</button></div></div>`;
         }).join('') : emptyHTML('✓', 'Nenhuma conta em aberto.');
 
         const limit = Number(state.settings.monthlyLimit || 0);
         const percent = limit > 0 ? totals.expense / limit * 100 : 0;
         document.getElementById('monthlyLimitCard').innerHTML = limit > 0 ? `
-          <div class="progress-label"><strong>${money(totals.expense)} gastos</strong><span class="muted">de ${money(limit)}</span></div>
+          <div class="progress-label"><strong>${dashboardMoney(totals.expense)} gastos</strong><span class="muted">de ${dashboardMoney(limit)}</span></div>
           <div class="progress"><span class="${percent >= 100 ? 'danger' : percent >= 80 ? 'warning' : ''}" style="width:${Math.min(percent,100)}%"></span></div>
-          <p class="helper" style="margin-top:9px">${percent >= 100 ? `Limite ultrapassado em ${money(totals.expense-limit)}.` : `Restam ${money(limit-totals.expense)} neste mês.`}</p>` : `<p class="muted">Defina um limite mensal para acompanhar seus gastos.</p><button class="btn small light" type="button" data-go="settings" style="margin-top:12px">Definir limite</button>`;
+          <p class="helper" style="margin-top:9px">${percent >= 100 ? `Limite ultrapassado em ${dashboardMoney(totals.expense-limit)}.` : `Restam ${dashboardMoney(limit-totals.expense)} neste mês.`}</p>` : `<p class="muted">Defina um limite mensal para acompanhar seus gastos.</p><button class="btn small light" type="button" data-go="settings" style="margin-top:12px">Definir limite</button>`;
+        renderPrivacyButton();
+      }
+
+      function renderPrivacyButton() {
+        const button = document.getElementById('toggleValuesButton');
+        button.hidden = currentView !== 'dashboard';
+        button.classList.toggle('values-hidden', valuesHidden);
+        button.setAttribute('aria-pressed', String(valuesHidden));
+        button.setAttribute('aria-label', valuesHidden ? 'Mostrar valores da tela inicial' : 'Ocultar valores da tela inicial');
+        button.title = valuesHidden ? 'Mostrar valores' : 'Ocultar valores';
+      }
+
+      function toggleDashboardValues() {
+        valuesHidden = !valuesHidden;
+        savePrivacySetting();
+        renderDashboard();
+        renderDueAlert();
       }
 
       function renderTransactions() {
@@ -1382,7 +1420,8 @@
         const variableCount = highlighted.filter(bill => bill.variableAmount).length;
         const knownTotal = sum(highlighted.filter(bill => !bill.variableAmount), bill => bill.amount);
         const variableText = variableCount ? ` ${variableCount} ${variableCount === 1 ? 'conta está' : 'contas estão'} com valor a definir.` : '';
-        document.getElementById('dueAlertText').textContent = overdue.length ? `${variableCount ? 'Total conhecido:' : 'Você tem'} ${money(knownTotal)} em atraso.${variableText}` : `${variableCount ? 'Total conhecido' : 'Total próximo'}: ${money(knownTotal)}.${variableText}`;
+        const amountText = currentView === 'dashboard' ? dashboardMoney(knownTotal) : money(knownTotal);
+        document.getElementById('dueAlertText').textContent = overdue.length ? `${variableCount ? 'Total conhecido:' : 'Você tem'} ${amountText} em atraso.${variableText}` : `${variableCount ? 'Total conhecido' : 'Total próximo'}: ${amountText}.${variableText}`;
       }
 
       function switchView(view) {
@@ -1986,6 +2025,7 @@
       document.getElementById('monthlyLimit').addEventListener('change', event => { state.settings.monthlyLimit = Math.max(0, Number(event.target.value || 0)); saveState(); renderAll(); showToast('Limite mensal atualizado.'); });
       document.getElementById('enableNotifications').addEventListener('click', enableNotifications);
       document.getElementById('installAppButton').addEventListener('click', installApp);
+      document.getElementById('toggleValuesButton').addEventListener('click', toggleDashboardValues);
       document.getElementById('configurePinButton').addEventListener('click', openPinSettings);
       document.getElementById('pinSettingsForm').addEventListener('submit', savePinSettings);
       document.getElementById('disablePinButton').addEventListener('click', disablePinProtection);
@@ -1997,7 +2037,7 @@
       document.getElementById('exportCalendar').addEventListener('click', () => exportCalendar());
       document.getElementById('calendarAllBtn').addEventListener('click', () => exportCalendar());
       document.getElementById('exportCsv').addEventListener('click', exportCsv);
-      document.getElementById('clearData').addEventListener('click', () => askConfirm('Apagar todos os dados?', 'Esta ação não pode ser desfeita. Faça um backup antes se quiser conservar seus registros.', () => { state = clone(DEFAULT_STATE); localStorage.removeItem(STORAGE_KEY); document.getElementById('txMonth').value = currentMonth(); document.getElementById('reportMonth').value = currentMonth(); renderAll(); switchView('dashboard'); showToast('Todos os dados foram apagados.'); }, 'Apagar tudo'));
+      document.getElementById('clearData').addEventListener('click', () => askConfirm('Apagar todos os dados?', 'Esta ação não pode ser desfeita. Faça um backup antes se quiser conservar seus registros.', () => { state = clone(DEFAULT_STATE); localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(PRIVACY_KEY); valuesHidden = false; document.getElementById('txMonth').value = currentMonth(); document.getElementById('reportMonth').value = currentMonth(); renderAll(); switchView('dashboard'); showToast('Todos os dados foram apagados.'); }, 'Apagar tudo'));
       document.getElementById('confirmCancel').addEventListener('click', () => { confirmAction = null; document.getElementById('confirmDialog').close(); });
       document.getElementById('confirmOk').addEventListener('click', () => { const action = confirmAction; confirmAction = null; document.getElementById('confirmDialog').close(); if (action) action(); });
       document.querySelectorAll('dialog').forEach(dialog => dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); }));
