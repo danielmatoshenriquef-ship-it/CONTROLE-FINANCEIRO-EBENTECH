@@ -734,6 +734,7 @@
       const LICENSE_CACHE_KEY = 'minhas_financas_license_v1';
       const PIN_KEY = 'minhas_financas_pin_v1';
       const PIN_ITERATIONS = 180000;
+      const PIN_BACKGROUND_LOCK_MS = 30 * 1000;
       const LICENSE_VALIDATION_DAYS = 7;
       const LICENSE_VALIDATION_MS = LICENSE_VALIDATION_DAYS * 24 * 60 * 60 * 1000;
       const CATEGORIES = ['Casa','Carro','Alimentação','Lazer','Despesas médicas','Outros'];
@@ -757,6 +758,7 @@
       let currentDeviceCode = '';
       let currentLicense = null;
       let pinUnlockResolver = null;
+      let appHiddenAt = 0;
 
       function clone(value) { return JSON.parse(JSON.stringify(value)); }
       function normalizeState(data) {
@@ -949,17 +951,20 @@
         pinUnlockResolver = null;
         if (resolve) resolve(true);
       }
-      function requirePinUnlock() {
-        if (!readPinConfig()) {
-          unlockPinApp();
-          return Promise.resolve(true);
-        }
+      function lockPinApp(focusInput = true) {
         document.body.classList.add('pin-locked');
         document.querySelector('.app').setAttribute('aria-hidden', 'true');
         document.getElementById('pinGate').hidden = false;
         document.getElementById('pinUnlockError').textContent = '';
         document.getElementById('pinUnlockInput').value = '';
-        setTimeout(() => document.getElementById('pinUnlockInput').focus(), 0);
+        if (focusInput) setTimeout(() => document.getElementById('pinUnlockInput').focus(), 0);
+      }
+      function requirePinUnlock() {
+        if (!readPinConfig()) {
+          unlockPinApp();
+          return Promise.resolve(true);
+        }
+        lockPinApp();
         return new Promise(resolve => { pinUnlockResolver = resolve; });
       }
       async function handlePinUnlock(event) {
@@ -1011,7 +1016,7 @@
           event.currentTarget.reset();
           document.getElementById('pinSettingsDialog').close();
           renderSettings();
-          showToast(enabled ? 'Senha alterada com sucesso.' : 'Senha ativada. Ela será pedida na próxima abertura.');
+          showToast(enabled ? 'Senha alterada com sucesso.' : 'Senha ativada. Ela será pedida ao abrir ou após 30 segundos fora do app.');
         } catch (failure) {
           error.textContent = 'Não foi possível salvar a senha neste navegador.';
         } finally { button.disabled = false; }
@@ -1351,7 +1356,7 @@
         const pinBadge = document.getElementById('pinStatusBadge');
         pinBadge.textContent = pinEnabled ? 'Ativada' : 'Desativada';
         pinBadge.className = `status ${pinEnabled ? 'paid' : 'open'}`;
-        document.getElementById('pinStatusText').textContent = pinEnabled ? 'O aplicativo pedirá a senha numérica ao abrir neste aparelho.' : 'Crie uma senha numérica de 4 a 8 dígitos para bloquear o aplicativo.';
+        document.getElementById('pinStatusText').textContent = pinEnabled ? 'Pede a senha ao abrir ou depois de 30 segundos fora do aplicativo.' : 'Crie uma senha numérica de 4 a 8 dígitos para bloquear o aplicativo.';
         document.getElementById('configurePinButton').textContent = pinEnabled ? 'Alterar senha' : 'Criar senha';
         document.getElementById('settingsLicenseCode').textContent = currentDeviceCode;
         document.getElementById('licenseDeviceLabel').textContent = currentLicense?.label || 'Aparelho autorizado';
@@ -1906,6 +1911,14 @@
       const licensed = await validateDeviceAccess();
       if (!licensed) return;
       await requirePinUnlock();
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+          appHiddenAt = Date.now();
+          return;
+        }
+        if (appHiddenAt && Date.now() - appHiddenAt >= PIN_BACKGROUND_LOCK_MS && readPinConfig()) lockPinApp();
+        appHiddenAt = 0;
+      });
 
       document.addEventListener('click', event => {
         const target = event.target.closest('button');
