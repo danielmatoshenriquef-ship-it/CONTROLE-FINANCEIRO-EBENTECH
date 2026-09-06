@@ -1,5 +1,12 @@
 {
   "version": 1,
   "validationDays": 30,
-  "devices": []
+  "devices": [
+    {
+      "hash": "d0e659bb559c7f1ec8f3bb6deb2814b28bc2804817df4c71b8aeb2733cf2760a",
+      "label": "Daniel Henrique",
+      "active": true,
+      "expiresAt": null
+    }
+  ]
 }
