@@ -19,6 +19,12 @@
       "label": "Alessandro",
       "active": true,
       "expiresAt": null
+    },
+    {
+      "hash": "a11f48a5695888cc93fe13a16aa00242ad9a830dc5f6425fcd34a5697df04709",
+      "label": "Heber",
+      "active": true,
+      "expiresAt": null
     }
   ]
 }
