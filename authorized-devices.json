@@ -25,6 +25,12 @@
       "label": "Heber",
       "active": true,
       "expiresAt": null
+    },
+    {
+      "hash": "8961000b8a17aa43457b1493221a831ecd2db55eb7462139ee32a5fc5bd9bac2",
+      "label": "Ricardo",
+      "active": true,
+      "expiresAt": null
     }
   ]
 }
