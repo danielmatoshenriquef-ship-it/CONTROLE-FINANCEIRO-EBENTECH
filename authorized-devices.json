@@ -38,9 +38,15 @@
       "active": true,
       "expiresAt": null
     },
-     {
+    {
       "hash": "d67c5d2a17b4d33bdb84f67388ada63e872cba5d9b908b6151042404f64cb437",
       "label": "Michael",
+      "active": true,
+      "expiresAt": null
+    },
+    {
+      "hash": "af6a26458377e532515ea2b9ff086759b08fe053865cd4651cf7741cc04a8e8d",
+      "label": "Paola",
       "active": true,
       "expiresAt": null
     }
