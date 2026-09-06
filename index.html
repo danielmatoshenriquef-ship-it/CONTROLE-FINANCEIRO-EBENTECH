@@ -969,18 +969,20 @@
       }
       async function handlePinUnlock(event) {
         event.preventDefault();
+        const form = event.currentTarget;
         const input = document.getElementById('pinUnlockInput');
         const error = document.getElementById('pinUnlockError');
-        const button = event.currentTarget.querySelector('button[type="submit"]');
+        const button = form.querySelector('button[type="submit"]');
         button.disabled = true;
         error.textContent = '';
         try {
           if (await verifyPin(input.value)) {
-            event.currentTarget.reset();
+            form.reset();
             unlockPinApp();
           } else {
             error.textContent = 'Senha incorreta. Tente novamente.';
-            input.select();
+            try { input.select(); }
+            catch (selectionError) { input.focus(); }
           }
         } catch (failure) {
           error.textContent = 'Não foi possível verificar a senha neste navegador.';
@@ -1000,12 +1002,13 @@
       }
       async function savePinSettings(event) {
         event.preventDefault();
+        const form = event.currentTarget;
         const enabled = Boolean(readPinConfig());
         const currentPin = document.getElementById('currentPin').value;
         const newPin = document.getElementById('newPin').value;
         const confirmPin = document.getElementById('confirmPin').value;
         const error = document.getElementById('pinSettingsError');
-        const button = event.currentTarget.querySelector('button[type="submit"]');
+        const button = form.querySelector('button[type="submit"]');
         error.textContent = '';
         if (!/^[0-9]{4,8}$/.test(newPin)) { error.textContent = 'A nova senha precisa ter de 4 a 8 números.'; return; }
         if (newPin !== confirmPin) { error.textContent = 'A confirmação não é igual à nova senha.'; return; }
@@ -1013,7 +1016,7 @@
         try {
           if (enabled && !(await verifyPin(currentPin))) { error.textContent = 'A senha atual está incorreta.'; return; }
           await storePin(newPin);
-          event.currentTarget.reset();
+          form.reset();
           document.getElementById('pinSettingsDialog').close();
           renderSettings();
           showToast(enabled ? 'Senha alterada com sucesso.' : 'Senha ativada. Ela será pedida ao abrir ou após 30 segundos fora do app.');
