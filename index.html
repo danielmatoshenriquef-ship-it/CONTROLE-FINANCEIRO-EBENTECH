@@ -548,7 +548,7 @@
           <article class="card span-2">
             <div class="card-head"><h2>Acesso deste aparelho</h2><span class="status paid" id="licenseStatusBadge">Autorizado</span></div>
             <div class="card-body license-device-row">
-              <div><strong id="licenseDeviceLabel">Aparelho autorizado</strong><p class="muted small-text" id="licenseValidationText">A autorização funciona offline por até 30 dias.</p><code class="device-code-inline" id="settingsLicenseCode"></code></div>
+              <div><strong id="licenseDeviceLabel">Aparelho autorizado</strong><p class="muted small-text" id="licenseValidationText">A autorização funciona offline por até 7 dias.</p><code class="device-code-inline" id="settingsLicenseCode"></code></div>
               <button class="btn light small" type="button" id="copySettingsLicenseCode">Copiar código</button>
             </div>
           </article>
@@ -679,7 +679,7 @@
       const STORAGE_KEY = 'minhas_financas_offline_v1';
       const DEVICE_KEY = 'minhas_financas_device_v1';
       const LICENSE_CACHE_KEY = 'minhas_financas_license_v1';
-      const LICENSE_VALIDATION_DAYS = 30;
+      const LICENSE_VALIDATION_DAYS = 7;
       const LICENSE_VALIDATION_MS = LICENSE_VALIDATION_DAYS * 24 * 60 * 60 * 1000;
       const CATEGORIES = ['Casa','Carro','Alimentação','Lazer','Despesas médicas','Outros'];
       const PAGE_TITLES = { dashboard: 'Visão geral', transactions: 'Lançamentos', bills: 'Contas a pagar', cards: 'Cartões de crédito', savings: 'Dinheiro guardado', reports: 'Relatórios', settings: 'Ajustes' };
@@ -830,14 +830,18 @@
           unlockLicensedApp();
           return true;
         } catch (error) {
-          const validUntil = cached?.deviceHash === deviceHash ? Date.parse(cached.validUntil) : 0;
-          const clockIsValid = !cached?.validatedAt || now >= Date.parse(cached.validatedAt) - 24 * 60 * 60 * 1000;
+          const cacheMatches = cached?.deviceHash === deviceHash;
+          const cachedValidUntil = cacheMatches ? Date.parse(cached.validUntil) : 0;
+          const cachedValidatedAt = cacheMatches ? Date.parse(cached.validatedAt) : 0;
+          const policyValidUntil = Number.isFinite(cachedValidatedAt) ? cachedValidatedAt + LICENSE_VALIDATION_MS : 0;
+          const validUntil = Math.min(Number.isFinite(cachedValidUntil) ? cachedValidUntil : 0, policyValidUntil);
+          const clockIsValid = Number.isFinite(cachedValidatedAt) && now >= cachedValidatedAt - 24 * 60 * 60 * 1000;
           if (validUntil >= now && clockIsValid) {
             currentLicense = { ...cached, offline: true };
             unlockLicensedApp();
             return true;
           }
-          setLicenseGateState('offline', 'Validação necessária', 'Conecte este aparelho à internet para confirmar o acesso. A validação é necessária a cada 30 dias.');
+          setLicenseGateState('offline', 'Validação necessária', 'Conecte este aparelho à internet para confirmar o acesso. A validação é necessária a cada 7 dias.');
           return false;
         }
       }
