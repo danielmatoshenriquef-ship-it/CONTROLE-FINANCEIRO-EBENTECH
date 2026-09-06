@@ -13,6 +13,12 @@
       "label": "Raissa",
       "active": true,
       "expiresAt": null
+    },
+    {
+      "hash": "7c9ba4fce92c71cee5c6721e1f38881704b8add4eccdf7f31a7e3ddb6490ecff",
+      "label": "Alessandro",
+      "active": true,
+      "expiresAt": null
     }
   ]
 }
