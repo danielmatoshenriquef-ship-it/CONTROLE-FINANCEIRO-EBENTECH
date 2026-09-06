@@ -1128,6 +1128,21 @@
       }
       function sum(items, getter) { return items.reduce((total, item) => total + Number(getter(item) || 0), 0); }
       function transactionsForMonth(month) { return state.transactions.filter(t => String(t.date || '').slice(0,7) === month); }
+      function recentTransactionsForDashboard() {
+        const standalone = [];
+        const installmentSeries = new Map();
+        state.transactions.filter(transaction => transaction.source !== 'savings').forEach(transaction => {
+          if (!transaction.installmentSeriesId) {
+            standalone.push(transaction);
+            return;
+          }
+          const current = installmentSeries.get(transaction.installmentSeriesId);
+          const installmentNumber = Number(transaction.installmentNumber || 1);
+          const currentNumber = Number(current?.installmentNumber || Infinity);
+          if (!current || installmentNumber < currentNumber || (installmentNumber === currentNumber && String(transaction.date).localeCompare(String(current.date)) < 0)) installmentSeries.set(transaction.installmentSeriesId, transaction);
+        });
+        return standalone.concat([...installmentSeries.values()]).sort((a,b) => String(b.date).localeCompare(String(a.date)) || String(b.createdAt).localeCompare(String(a.createdAt))).slice(0,6);
+      }
       function isReportableTransaction(transaction) { return transaction.source !== 'savings' && transaction.source !== 'card-payment'; }
       function totalsForMonth(month) {
         const list = transactionsForMonth(month).filter(isReportableTransaction);
@@ -1268,13 +1283,20 @@
         document.getElementById('statExpenseFoot').textContent = `${totals.expenseCount} ${totals.expenseCount === 1 ? 'lançamento' : 'lançamentos'}`;
         document.getElementById('statSavedFoot').textContent = state.vaults.length ? `${state.vaults.length} ${state.vaults.length === 1 ? 'reserva' : 'reservas'}` : 'Nenhuma reserva';
 
-        const recent = state.transactions.filter(t => t.source !== 'savings').sort((a,b) => String(b.date).localeCompare(String(a.date)) || String(b.createdAt).localeCompare(String(a.createdAt))).slice(0,6);
-        document.getElementById('recentTransactions').innerHTML = recent.length ? recent.map(t => `
+        const recent = recentTransactionsForDashboard();
+        document.getElementById('recentTransactions').innerHTML = recent.length ? recent.map(t => {
+          const isInstallment = Boolean(t.installmentSeriesId);
+          const installmentCount = Number(t.totalInstallments || 1);
+          const description = isInstallment ? (t.purchaseDescription || String(t.description || '').replace(/\s\(\d+\/\d+\)$/, '')) : t.description;
+          const displayedAmount = isInstallment ? Number(t.purchaseTotal || (Number(t.amount) * installmentCount)) : Number(t.amount);
+          const installmentText = isInstallment ? ` · ${installmentCount}x de ${dashboardMoney(t.amount)}` : '';
+          return `
           <div class="list-item">
             <span class="item-badge ${t.type}">${t.type === 'income' ? '↑' : '↓'}</span>
-            <div class="item-main"><div class="item-title">${escapeHTML(t.description)}</div><div class="item-meta">${t.type === 'expense' ? escapeHTML(t.category) : 'Entrada'}${t.paymentSource === 'card' ? ` · Cartão ${escapeHTML(t.cardName || 'removido')}` : ''} · ${dateBR(t.date)}</div></div>
-            <div class="item-value ${t.type === 'income' ? 'positive' : 'negative'}">${t.type === 'income' ? '+' : '−'} ${dashboardMoney(t.amount)}</div>
-          </div>`).join('') : emptyHTML('↕', 'Adicione sua primeira receita ou despesa.');
+            <div class="item-main"><div class="item-title">${escapeHTML(description)}</div><div class="item-meta">${t.type === 'expense' ? escapeHTML(t.category) : 'Entrada'}${installmentText}${t.paymentSource === 'card' ? ` · Cartão ${escapeHTML(t.cardName || 'removido')}` : ''} · ${dateBR(t.date)}</div></div>
+            <div class="item-value ${t.type === 'income' ? 'positive' : 'negative'}">${t.type === 'income' ? '+' : '−'} ${dashboardMoney(displayedAmount)}</div>
+          </div>`;
+        }).join('') : emptyHTML('↕', 'Adicione sua primeira receita ou despesa.');
 
         const upcoming = billsForImmediateAttention().sort((a,b) => a.dueDate.localeCompare(b.dueDate)).slice(0,5);
         document.getElementById('upcomingBills').innerHTML = upcoming.length ? upcoming.map(b => {
