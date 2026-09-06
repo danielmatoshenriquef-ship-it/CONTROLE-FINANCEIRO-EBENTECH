@@ -252,12 +252,17 @@
     .license-device-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
     .device-code-inline { display: block; margin-top: 8px; color: var(--navy); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 14px; font-weight: 800; letter-spacing: .035em; overflow-wrap: anywhere; }
 
-    body.license-locked { overflow: hidden; padding-bottom: 0 !important; }
+    body.license-locked, body.pin-locked { overflow: hidden; padding-bottom: 0 !important; }
     body.license-locked > .app,
     body.license-locked > .quick-entry-menu,
     body.license-locked > .mobile-add,
     body.license-locked > dialog,
-    body.license-locked > .toast { visibility: hidden; }
+    body.license-locked > .toast,
+    body.pin-locked > .app,
+    body.pin-locked > .quick-entry-menu,
+    body.pin-locked > .mobile-add,
+    body.pin-locked > dialog,
+    body.pin-locked > .toast { visibility: hidden; }
     .license-gate {
       position: fixed; z-index: 1000; inset: 0; min-height: 100svh; padding: max(22px, env(safe-area-inset-top)) 18px max(22px, env(safe-area-inset-bottom));
       display: grid; place-items: center; overflow-y: auto;
@@ -287,6 +292,12 @@
     .license-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 14px; }
     .license-actions .btn { width: 100%; }
     .license-help { min-height: 20px; margin-top: 17px; color: #9fb1c4; font-size: 13px; }
+    .pin-form { display: grid; gap: 13px; margin-top: 24px; text-align: left; }
+    .pin-form label { color: #dbe6f1; }
+    .pin-input { text-align: center; font-size: 22px; font-weight: 850; letter-spacing: .24em; }
+    .pin-form .btn { width: 100%; }
+    .pin-error { min-height: 21px; margin-top: 12px; color: var(--red); font-size: 14px; }
+    .license-panel .pin-error { color: #ffc8cf; }
 
     dialog { width: min(560px, calc(100vw - 26px)); max-height: min(88vh, 760px); border: 0; border-radius: 20px; padding: 0; color: var(--ink); box-shadow: 0 30px 90px rgba(0,0,0,.28); overflow: hidden; }
     dialog::backdrop { background: rgba(8, 18, 31, .6); backdrop-filter: blur(3px); }
@@ -295,7 +306,7 @@
     .dialog-body { max-height: calc(88vh - 135px); padding: 20px 21px; overflow-y: auto; }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
     .span-2 { grid-column: 1 / -1; }
-    .dialog-actions { padding: 15px 21px; display: flex; justify-content: flex-end; gap: 9px; border-top: 1px solid var(--line); background: #fafbfd; }
+    .dialog-actions { padding: 15px 21px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px; border-top: 1px solid var(--line); background: #fafbfd; }
     .segmented { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; padding: 5px; border-radius: 13px; background: #eef2f6; }
     .segmented label { position: relative; }
     .segmented input { position: absolute; opacity: 0; pointer-events: none; }
@@ -383,7 +394,7 @@
     }
   </style>
 </head>
-<body class="license-locked">
+<body class="license-locked pin-locked">
   <section class="license-gate" id="licenseGate" role="dialog" aria-modal="true" aria-labelledby="licenseTitle">
     <div class="license-panel">
       <div class="license-brand"><span class="license-brand-mark">$</span><span>Minhas Finanças</span></div>
@@ -400,6 +411,25 @@
         </div>
       </div>
       <p class="license-help" id="licenseHelp">Seus dados financeiros permanecem salvos somente neste aparelho.</p>
+    </div>
+  </section>
+
+  <section class="license-gate" id="pinGate" role="dialog" aria-modal="true" aria-labelledby="pinGateTitle" hidden>
+    <div class="license-panel">
+      <div class="license-brand"><span class="license-brand-mark">$</span><span>Minhas Finanças</span></div>
+      <div class="license-state-icon" aria-hidden="true">●</div>
+      <p class="license-kicker">Proteção local</p>
+      <h1 id="pinGateTitle">Digite sua senha</h1>
+      <p class="license-message">Use a senha numérica configurada neste aparelho.</p>
+      <form class="pin-form" id="pinUnlockForm">
+        <div class="field">
+          <label for="pinUnlockInput">Senha numérica</label>
+          <input class="control pin-input" id="pinUnlockInput" type="password" inputmode="numeric" pattern="[0-9]{4,8}" minlength="4" maxlength="8" autocomplete="current-password" required aria-describedby="pinUnlockError">
+        </div>
+        <button class="btn green" type="submit">Entrar</button>
+      </form>
+      <p class="pin-error" id="pinUnlockError" role="alert" aria-live="polite"></p>
+      <p class="license-help">A senha protege somente este aparelho.</p>
     </div>
   </section>
 
@@ -546,6 +576,13 @@
             </div>
           </article>
           <article class="card span-2">
+            <div class="card-head"><h2>Senha de acesso</h2><span class="status open" id="pinStatusBadge">Desativada</span></div>
+            <div class="card-body license-device-row">
+              <div><strong>Proteção deste aparelho</strong><p class="muted small-text" id="pinStatusText">Crie uma senha numérica de 4 a 8 dígitos para bloquear o aplicativo.</p></div>
+              <button class="btn light small" type="button" id="configurePinButton">Criar senha</button>
+            </div>
+          </article>
+          <article class="card span-2">
             <div class="card-head"><h2>Acesso deste aparelho</h2><span class="status paid" id="licenseStatusBadge">Autorizado</span></div>
             <div class="card-body license-device-row">
               <div><strong id="licenseDeviceLabel">Aparelho autorizado</strong><p class="muted small-text" id="licenseValidationText">A autorização funciona offline por até 7 dias.</p><code class="device-code-inline" id="settingsLicenseCode"></code></div>
@@ -554,7 +591,7 @@
           </article>
           <article class="card danger-zone span-2">
             <div class="card-head"><h2>Apagar todos os dados</h2></div>
-            <div class="card-body" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap"><p class="muted">Remove definitivamente lançamentos, contas, reservas e configurações deste navegador.</p><button class="btn danger" type="button" id="clearData">Apagar tudo</button></div>
+            <div class="card-body" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap"><p class="muted">Remove lançamentos, contas, reservas e preferências financeiras. A senha de acesso será mantida.</p><button class="btn danger" type="button" id="clearData">Apagar tudo</button></div>
           </article>
         </div>
       </section>
@@ -665,6 +702,22 @@
     </form>
   </dialog>
 
+  <dialog id="pinSettingsDialog">
+    <form id="pinSettingsForm">
+      <div class="dialog-head"><div><h2 id="pinSettingsTitle">Criar senha</h2><p class="muted small-text">Proteção opcional deste aparelho.</p></div><button class="dialog-close" type="button" data-close aria-label="Fechar">×</button></div>
+      <div class="dialog-body">
+        <div class="form-grid">
+          <div class="field span-2 hide" id="currentPinField"><label for="currentPin">Senha atual</label><input class="control pin-input" id="currentPin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" minlength="4" maxlength="8" autocomplete="current-password"></div>
+          <div class="field span-2"><label for="newPin">Nova senha</label><input class="control pin-input" id="newPin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" minlength="4" maxlength="8" autocomplete="new-password" required><p class="helper">Use somente números, com 4 a 8 dígitos.</p></div>
+          <div class="field span-2"><label for="confirmPin">Confirmar nova senha</label><input class="control pin-input" id="confirmPin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" minlength="4" maxlength="8" autocomplete="new-password" required></div>
+        </div>
+        <p class="pin-error" id="pinSettingsError" role="alert" aria-live="polite"></p>
+        <p class="helper">Esta senha não entra no backup. Se você esquecê-la, será necessário limpar os dados deste site para voltar a entrar.</p>
+      </div>
+      <div class="dialog-actions"><button class="btn danger" type="button" id="disablePinButton" hidden>Desativar senha</button><button class="btn light" type="button" data-close>Cancelar</button><button class="btn green" type="submit">Salvar senha</button></div>
+    </form>
+  </dialog>
+
   <dialog id="confirmDialog">
     <div class="dialog-head"><div><h2 id="confirmTitle">Confirmar ação</h2><p class="muted small-text" id="confirmMessage"></p></div></div>
     <div class="dialog-actions"><button class="btn light" type="button" id="confirmCancel">Cancelar</button><button class="btn danger" type="button" id="confirmOk">Confirmar</button></div>
@@ -679,6 +732,8 @@
       const STORAGE_KEY = 'minhas_financas_offline_v1';
       const DEVICE_KEY = 'minhas_financas_device_v1';
       const LICENSE_CACHE_KEY = 'minhas_financas_license_v1';
+      const PIN_KEY = 'minhas_financas_pin_v1';
+      const PIN_ITERATIONS = 180000;
       const LICENSE_VALIDATION_DAYS = 7;
       const LICENSE_VALIDATION_MS = LICENSE_VALIDATION_DAYS * 24 * 60 * 60 * 1000;
       const CATEGORIES = ['Casa','Carro','Alimentação','Lazer','Despesas médicas','Outros'];
@@ -701,6 +756,7 @@
       let deferredInstallPrompt = null;
       let currentDeviceCode = '';
       let currentLicense = null;
+      let pinUnlockResolver = null;
 
       function clone(value) { return JSON.parse(JSON.stringify(value)); }
       function normalizeState(data) {
@@ -767,7 +823,6 @@
       function unlockLicensedApp() {
         document.body.classList.remove('license-locked');
         document.getElementById('licenseGate').hidden = true;
-        document.querySelector('.app').setAttribute('aria-hidden', 'false');
       }
       async function copyCurrentDeviceCode(useToast = false) {
         try {
@@ -844,6 +899,139 @@
           setLicenseGateState('offline', 'Validação necessária', 'Conecte este aparelho à internet para confirmar o acesso. A validação é necessária a cada 7 dias.');
           return false;
         }
+      }
+      function readPinConfig() {
+        try {
+          const raw = localStorage.getItem(PIN_KEY);
+          if (!raw) return null;
+          const config = JSON.parse(raw);
+          if (config?.version !== 1 || typeof config.salt !== 'string' || typeof config.hash !== 'string' || !Number.isInteger(config.iterations) || config.iterations < 100000) return null;
+          return config;
+        } catch (error) { return null; }
+      }
+      function bytesToBase64(bytes) {
+        let binary = '';
+        bytes.forEach(byte => { binary += String.fromCharCode(byte); });
+        return btoa(binary);
+      }
+      function base64ToBytes(value) {
+        const binary = atob(value);
+        return Uint8Array.from(binary, character => character.charCodeAt(0));
+      }
+      async function derivePinHash(pin, salt, iterations) {
+        if (!window.crypto?.subtle || typeof TextEncoder === 'undefined') throw new Error('Criptografia indisponível');
+        const material = await window.crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveBits']);
+        const bits = await window.crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations }, material, 256);
+        return new Uint8Array(bits);
+      }
+      function secureBytesEqual(left, right) {
+        if (left.length !== right.length) return false;
+        let difference = 0;
+        for (let index = 0; index < left.length; index += 1) difference |= left[index] ^ right[index];
+        return difference === 0;
+      }
+      async function verifyPin(pin, config = readPinConfig()) {
+        if (!config) return false;
+        const actual = await derivePinHash(pin, base64ToBytes(config.salt), config.iterations);
+        return secureBytesEqual(actual, base64ToBytes(config.hash));
+      }
+      async function storePin(pin) {
+        const salt = new Uint8Array(16);
+        window.crypto.getRandomValues(salt);
+        const hash = await derivePinHash(pin, salt, PIN_ITERATIONS);
+        localStorage.setItem(PIN_KEY, JSON.stringify({ version: 1, iterations: PIN_ITERATIONS, salt: bytesToBase64(salt), hash: bytesToBase64(hash) }));
+      }
+      function unlockPinApp() {
+        document.body.classList.remove('pin-locked');
+        document.getElementById('pinGate').hidden = true;
+        document.querySelector('.app').setAttribute('aria-hidden', 'false');
+        const resolve = pinUnlockResolver;
+        pinUnlockResolver = null;
+        if (resolve) resolve(true);
+      }
+      function requirePinUnlock() {
+        if (!readPinConfig()) {
+          unlockPinApp();
+          return Promise.resolve(true);
+        }
+        document.body.classList.add('pin-locked');
+        document.querySelector('.app').setAttribute('aria-hidden', 'true');
+        document.getElementById('pinGate').hidden = false;
+        document.getElementById('pinUnlockError').textContent = '';
+        document.getElementById('pinUnlockInput').value = '';
+        setTimeout(() => document.getElementById('pinUnlockInput').focus(), 0);
+        return new Promise(resolve => { pinUnlockResolver = resolve; });
+      }
+      async function handlePinUnlock(event) {
+        event.preventDefault();
+        const input = document.getElementById('pinUnlockInput');
+        const error = document.getElementById('pinUnlockError');
+        const button = event.currentTarget.querySelector('button[type="submit"]');
+        button.disabled = true;
+        error.textContent = '';
+        try {
+          if (await verifyPin(input.value)) {
+            event.currentTarget.reset();
+            unlockPinApp();
+          } else {
+            error.textContent = 'Senha incorreta. Tente novamente.';
+            input.select();
+          }
+        } catch (failure) {
+          error.textContent = 'Não foi possível verificar a senha neste navegador.';
+        } finally { button.disabled = false; }
+      }
+      function openPinSettings() {
+        const enabled = Boolean(readPinConfig());
+        const form = document.getElementById('pinSettingsForm');
+        form.reset();
+        document.getElementById('pinSettingsError').textContent = '';
+        document.getElementById('pinSettingsTitle').textContent = enabled ? 'Alterar senha' : 'Criar senha';
+        document.getElementById('currentPinField').classList.toggle('hide', !enabled);
+        document.getElementById('currentPin').required = enabled;
+        document.getElementById('disablePinButton').hidden = !enabled;
+        document.getElementById('pinSettingsDialog').showModal();
+        setTimeout(() => document.getElementById(enabled ? 'currentPin' : 'newPin').focus(), 0);
+      }
+      async function savePinSettings(event) {
+        event.preventDefault();
+        const enabled = Boolean(readPinConfig());
+        const currentPin = document.getElementById('currentPin').value;
+        const newPin = document.getElementById('newPin').value;
+        const confirmPin = document.getElementById('confirmPin').value;
+        const error = document.getElementById('pinSettingsError');
+        const button = event.currentTarget.querySelector('button[type="submit"]');
+        error.textContent = '';
+        if (!/^[0-9]{4,8}$/.test(newPin)) { error.textContent = 'A nova senha precisa ter de 4 a 8 números.'; return; }
+        if (newPin !== confirmPin) { error.textContent = 'A confirmação não é igual à nova senha.'; return; }
+        button.disabled = true;
+        try {
+          if (enabled && !(await verifyPin(currentPin))) { error.textContent = 'A senha atual está incorreta.'; return; }
+          await storePin(newPin);
+          event.currentTarget.reset();
+          document.getElementById('pinSettingsDialog').close();
+          renderSettings();
+          showToast(enabled ? 'Senha alterada com sucesso.' : 'Senha ativada. Ela será pedida na próxima abertura.');
+        } catch (failure) {
+          error.textContent = 'Não foi possível salvar a senha neste navegador.';
+        } finally { button.disabled = false; }
+      }
+      async function disablePinProtection() {
+        const currentPin = document.getElementById('currentPin').value;
+        const error = document.getElementById('pinSettingsError');
+        const button = document.getElementById('disablePinButton');
+        error.textContent = '';
+        button.disabled = true;
+        try {
+          if (!(await verifyPin(currentPin))) { error.textContent = 'Digite a senha atual correta para desativar.'; return; }
+          localStorage.removeItem(PIN_KEY);
+          document.getElementById('pinSettingsForm').reset();
+          document.getElementById('pinSettingsDialog').close();
+          renderSettings();
+          showToast('Senha desativada neste aparelho.');
+        } catch (failure) {
+          error.textContent = 'Não foi possível desativar a senha.';
+        } finally { button.disabled = false; }
       }
       function id(prefix = 'id') { return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,8)}`; }
       function todayISO() {
@@ -1159,6 +1347,12 @@
         if (!('Notification' in window)) { notificationButton.textContent = 'Indisponível'; notificationButton.disabled = true; }
         else if (Notification.permission === 'granted') { notificationButton.textContent = 'Ativada'; notificationButton.disabled = true; }
         else if (Notification.permission === 'denied') { notificationButton.textContent = 'Bloqueada'; notificationButton.disabled = true; }
+        const pinEnabled = Boolean(readPinConfig());
+        const pinBadge = document.getElementById('pinStatusBadge');
+        pinBadge.textContent = pinEnabled ? 'Ativada' : 'Desativada';
+        pinBadge.className = `status ${pinEnabled ? 'paid' : 'open'}`;
+        document.getElementById('pinStatusText').textContent = pinEnabled ? 'O aplicativo pedirá a senha numérica ao abrir neste aparelho.' : 'Crie uma senha numérica de 4 a 8 dígitos para bloquear o aplicativo.';
+        document.getElementById('configurePinButton').textContent = pinEnabled ? 'Alterar senha' : 'Criar senha';
         document.getElementById('settingsLicenseCode').textContent = currentDeviceCode;
         document.getElementById('licenseDeviceLabel').textContent = currentLicense?.label || 'Aparelho autorizado';
         const badge = document.getElementById('licenseStatusBadge');
@@ -1707,9 +1901,11 @@
 
       document.getElementById('copyLicenseCode').addEventListener('click', () => copyCurrentDeviceCode(false));
       document.getElementById('retryLicense').addEventListener('click', () => location.reload());
+      document.getElementById('pinUnlockForm').addEventListener('submit', handlePinUnlock);
       if ('serviceWorker' in navigator && location.protocol !== 'file:') window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
       const licensed = await validateDeviceAccess();
       if (!licensed) return;
+      await requirePinUnlock();
 
       document.addEventListener('click', event => {
         const target = event.target.closest('button');
@@ -1774,6 +1970,9 @@
       document.getElementById('monthlyLimit').addEventListener('change', event => { state.settings.monthlyLimit = Math.max(0, Number(event.target.value || 0)); saveState(); renderAll(); showToast('Limite mensal atualizado.'); });
       document.getElementById('enableNotifications').addEventListener('click', enableNotifications);
       document.getElementById('installAppButton').addEventListener('click', installApp);
+      document.getElementById('configurePinButton').addEventListener('click', openPinSettings);
+      document.getElementById('pinSettingsForm').addEventListener('submit', savePinSettings);
+      document.getElementById('disablePinButton').addEventListener('click', disablePinProtection);
       document.getElementById('copySettingsLicenseCode').addEventListener('click', () => copyCurrentDeviceCode(true));
       document.getElementById('backupBtn').addEventListener('click', exportBackup);
       document.getElementById('quickBackup').addEventListener('click', exportBackup);
