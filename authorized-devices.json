@@ -37,6 +37,12 @@
       "label": "Ricardo 2",
       "active": true,
       "expiresAt": null
+    },
+     {
+      "hash": "d67c5d2a17b4d33bdb84f67388ada63e872cba5d9b908b6151042404f64cb437",
+      "label": "Michael",
+      "active": true,
+      "expiresAt": null
     }
   ]
 }
