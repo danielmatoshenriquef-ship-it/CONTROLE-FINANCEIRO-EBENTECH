@@ -49,6 +49,12 @@
       "label": "Paola",
       "active": true,
       "expiresAt": null
+    },
+    {
+      "hash": "d89c1cc4a6039f610388afad1019361aa0b97cc65b1c6746835264582c7786ac",
+      "label": "Helder",
+      "active": true,
+      "expiresAt": null
     }
   ]
 }
