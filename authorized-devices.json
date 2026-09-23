@@ -2,59 +2,15 @@
   "version": 1,
   "validationDays": 7,
   "devices": [
-    {
-      "hash": "d0e659bb559c7f1ec8f3bb6deb2814b28bc2804817df4c71b8aeb2733cf2760a",
-      "label": "Daniel Henrique",
-      "active": true,
-      "expiresAt": null
-    },
-    {
-      "hash": "08fd2ecf4a184448235f6b95e7eb648d9855802687cb6437047f41cb80e36fd7",
-      "label": "Raissa",
-      "active": true,
-      "expiresAt": null
-    },
-    {
-      "hash": "7c9ba4fce92c71cee5c6721e1f38881704b8add4eccdf7f31a7e3ddb6490ecff",
-      "label": "Alessandro",
-      "active": true,
-      "expiresAt": null
-    },
-    {
-      "hash": "a11f48a5695888cc93fe13a16aa00242ad9a830dc5f6425fcd34a5697df04709",
-      "label": "Heber",
-      "active": true,
-      "expiresAt": null
-    },
-    {
-      "hash": "8961000b8a17aa43457b1493221a831ecd2db55eb7462139ee32a5fc5bd9bac2",
-      "label": "Ricardo",
-      "active": true,
-      "expiresAt": null
-    },
-    {
-      "hash": "390c7d788ca617e05dcd67c8f01346579bb81a44cc024ac9c0f32af43b1f7992",
-      "label": "Ricardo 2",
-      "active": true,
-      "expiresAt": null
-    },
-    {
-      "hash": "d67c5d2a17b4d33bdb84f67388ada63e872cba5d9b908b6151042404f64cb437",
-      "label": "Michael",
-      "active": true,
-      "expiresAt": null
-    },
-    {
-      "hash": "af6a26458377e532515ea2b9ff086759b08fe053865cd4651cf7741cc04a8e8d",
-      "label": "Paola",
-      "active": true,
-      "expiresAt": null
-    },
-    {
-      "hash": "d89c1cc4a6039f610388afad1019361aa0b97cc65b1c6746835264582c7786ac",
-      "label": "Helder",
-      "active": true,
-      "expiresAt": null
-    }
+    {"hash":"d0e659bb559c7f1ec8f3bb6deb2814b28bc2804817df4c71b8aeb2733cf2760a","label":"Daniel Henrique","active":true,"expiresAt":null},
+    {"hash":"08fd2ecf4a184448235f6b95e7eb648d9855802687cb6437047f41cb80e36fd7","label":"Raissa","active":true,"expiresAt":null},
+    {"hash":"7c9ba4fce92c71cee5c6721e1f38881704b8add4eccdf7f31a7e3ddb6490ecff","label":"Alessandro","active":true,"expiresAt":null},
+    {"hash":"a11f48a5695888cc93fe13a16aa00242ad9a830dc5f6425fcd34a5697df04709","label":"Heber","active":true,"expiresAt":null},
+    {"hash":"8961000b8a17aa43457b1493221a831ecd2db55eb7462139ee32a5fc5bd9bac2","label":"Ricardo","active":true,"expiresAt":null},
+    {"hash":"390c7d788ca617e05dcd67c8f01346579bb81a44cc024ac9c0f32af43b1f7992","label":"Ricardo 2","active":true,"expiresAt":null},
+    {"hash":"d67c5d2a17b4d33bdb84f67388ada63e872cba5d9b908b6151042404f64cb437","label":"Michael","active":true,"expiresAt":null},
+    {"hash":"af6a26458377e532515ea2b9ff086759b08fe053865cd4651cf7741cc04a8e8d","label":"Paola","active":true,"expiresAt":null},
+    {"hash":"d89c1cc4a6039f610388afad1019361aa0b97cc65b1c6746835264582c7786ac","label":"Helder","active":true,"expiresAt":null},
+    {"hash":"691dd421f8b8a89dcce2f3557d23b9d237c8d437db58a0295d50a4ea2c9f4c04","label":"Dispositivo MF-XA6F","active":true,"expiresAt":null}
   ]
 }
