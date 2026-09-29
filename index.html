@@ -490,7 +490,7 @@
           </article>
           <div style="display:grid;gap:18px;align-content:start">
             <article class="card">
-              <div class="card-head"><div><h2>Próximas contas</h2><p class="muted small-text">Contas e a próxima fatura de cada cartão</p></div><button class="text-btn" type="button" data-go="bills">Ver todas</button></div>
+              <div class="card-head"><div><h2>Próximas contas</h2><p class="muted small-text">Próxima parcela ou fatura de cada compromisso</p></div><button class="text-btn" type="button" data-go="bills">Ver todas</button></div>
               <div class="card-body"><div class="due-list" id="upcomingBills"></div></div>
             </article>
             <article class="card">
@@ -1164,12 +1164,27 @@
       function billsForImmediateAttention() {
         const openBills = state.bills.filter(bill => bill.status !== 'paid');
         const nextCardInvoiceByCard = new Map();
-        openBills.filter(bill => bill.isCardInvoice).forEach(bill => {
-          const cardKey = bill.cardId || bill.invoiceKey || bill.title;
-          const current = nextCardInvoiceByCard.get(cardKey);
-          if (!current || String(bill.dueDate).localeCompare(String(current.dueDate)) < 0) nextCardInvoiceByCard.set(cardKey, bill);
+        const nextInstallmentBySeries = new Map();
+        const standaloneBills = [];
+        openBills.forEach(bill => {
+          if (bill.isCardInvoice) {
+            const cardKey = bill.cardId || bill.invoiceKey || bill.title;
+            const current = nextCardInvoiceByCard.get(cardKey);
+            if (!current || String(bill.dueDate).localeCompare(String(current.dueDate)) < 0) nextCardInvoiceByCard.set(cardKey, bill);
+            return;
+          }
+          if (bill.kind === 'installment' && bill.seriesId) {
+            const current = nextInstallmentBySeries.get(bill.seriesId);
+            if (!current || String(bill.dueDate).localeCompare(String(current.dueDate)) < 0) nextInstallmentBySeries.set(bill.seriesId, bill);
+            return;
+          }
+          standaloneBills.push(bill);
         });
-        return openBills.filter(bill => !bill.isCardInvoice).concat([...nextCardInvoiceByCard.values()]);
+        return standaloneBills.concat([...nextInstallmentBySeries.values()], [...nextCardInvoiceByCard.values()]);
+      }
+      function billDisplayTitle(bill) {
+        if (bill.kind === 'installment' && bill.totalInstallments) return `${bill.title} (${Number(bill.installmentNumber || 1)}/${Number(bill.totalInstallments)})`;
+        return bill.title;
       }
       function kindLabel(bill) {
         if (bill.kind === 'card') return 'Cartão';
@@ -1302,7 +1317,7 @@
         document.getElementById('upcomingBills').innerHTML = upcoming.length ? upcoming.map(b => {
           const overdue = billStatus(b) === 'overdue';
           const amount = b.variableAmount && b.status !== 'paid' ? '<span class="muted">A definir</span>' : `<strong>${dashboardMoney(b.amount)}</strong>`;
-          return `<div class="due-item ${overdue ? 'overdue' : ''}"><div class="due-top"><div><strong>${escapeHTML(b.title)}</strong><div class="due-date">${overdue ? 'Venceu em' : 'Vence em'} ${dateBR(b.dueDate)}</div></div>${amount}</div><div class="due-actions"><button class="btn small ${overdue ? 'danger' : 'green'}" type="button" data-pay-bill="${b.id}">Marcar paga</button><button class="btn small light" type="button" data-calendar-bill="${b.id}" title="Adicionar ao calendário">Calendário</button></div></div>`;
+          return `<div class="due-item ${overdue ? 'overdue' : ''}"><div class="due-top"><div><strong>${escapeHTML(billDisplayTitle(b))}</strong><div class="due-date">${overdue ? 'Venceu em' : 'Vence em'} ${dateBR(b.dueDate)}</div></div>${amount}</div><div class="due-actions"><button class="btn small ${overdue ? 'danger' : 'green'}" type="button" data-pay-bill="${b.id}">Marcar paga</button><button class="btn small light" type="button" data-calendar-bill="${b.id}" title="Adicionar ao calendário">Calendário</button></div></div>`;
         }).join('') : emptyHTML('✓', 'Nenhuma conta em aberto.');
 
         const limit = Number(state.settings.monthlyLimit || 0);
@@ -1349,7 +1364,7 @@
         tbody.innerHTML = list.map(b => {
           const status = billStatus(b);
           const statusText = status === 'paid' ? 'Paga' : status === 'overdue' ? 'Vencida' : 'Em aberto';
-          return `<tr><td><strong>${dateBR(b.dueDate)}</strong></td><td><strong>${escapeHTML(b.title)}</strong>${b.note ? `<div class="muted small-text">${escapeHTML(b.note)}</div>` : ''}</td><td>${b.isCardInvoice ? 'Compras' : escapeHTML(b.category)}</td><td><span class="status type">${escapeHTML(kindLabel(b))}</span></td><td>${billAmountHTML(b)}</td><td><span class="status ${status}">${statusText}</span></td><td><div class="action-menu">${b.status === 'paid' ? `<button class="text-btn" type="button" data-reopen-bill="${b.id}">Reabrir</button>` : `<button class="text-btn" type="button" data-pay-bill="${b.id}">Pagar</button><button class="text-btn" type="button" data-calendar-bill="${b.id}">Calendário</button>${b.isCardInvoice ? '' : `<button class="text-btn" type="button" data-edit-bill="${b.id}">Editar</button>`}`}${b.isCardInvoice ? '' : `<button class="text-btn red" type="button" data-delete-bill="${b.id}">Excluir</button>`}</div></td></tr>`;
+          return `<tr><td><strong>${dateBR(b.dueDate)}</strong></td><td><strong>${escapeHTML(billDisplayTitle(b))}</strong>${b.note ? `<div class="muted small-text">${escapeHTML(b.note)}</div>` : ''}</td><td>${b.isCardInvoice ? 'Compras' : escapeHTML(b.category)}</td><td><span class="status type">${escapeHTML(kindLabel(b))}</span></td><td>${billAmountHTML(b)}</td><td><span class="status ${status}">${statusText}</span></td><td><div class="action-menu">${b.status === 'paid' ? `<button class="text-btn" type="button" data-reopen-bill="${b.id}">Reabrir</button>` : `<button class="text-btn" type="button" data-pay-bill="${b.id}">Pagar</button><button class="text-btn" type="button" data-calendar-bill="${b.id}">Calendário</button>${b.isCardInvoice ? '' : `<button class="text-btn" type="button" data-edit-bill="${b.id}">Editar</button>`}`}${b.isCardInvoice ? '' : `<button class="text-btn red" type="button" data-delete-bill="${b.id}">Excluir</button>`}</div></td></tr>`;
         }).join('');
         empty.classList.toggle('hide', list.length > 0);
       }
@@ -1728,7 +1743,7 @@
         if (bill.variableAmount && informedAmount === null) {
           const form = document.getElementById('variableBillPaymentForm');
           form.reset(); form.elements.billId.value = bill.id;
-          document.getElementById('variableBillPaymentText').textContent = `${bill.title} · vencimento em ${dateBR(bill.dueDate)}`;
+          document.getElementById('variableBillPaymentText').textContent = `${billDisplayTitle(bill)} · vencimento em ${dateBR(bill.dueDate)}`;
           document.getElementById('variableBillPaymentDialog').showModal();
           setTimeout(() => form.elements.amount.focus(), 0);
           return;
@@ -1738,7 +1753,7 @@
         bill.amount = paidAmount;
         bill.status = 'paid'; bill.paidAt = todayISO();
         const transactionId = id('tx'); bill.transactionId = transactionId;
-        state.transactions.push({ id: transactionId, type: 'expense', description: bill.isCardInvoice ? `Pagamento ${bill.title}` : bill.title, amount: paidAmount, date: todayISO(), category: bill.category, account: '', note: `Pagamento da conta com vencimento em ${dateBR(bill.dueDate)}`, source: bill.isCardInvoice ? 'card-payment' : '', linkedBillId: bill.id, createdAt: new Date().toISOString() });
+        state.transactions.push({ id: transactionId, type: 'expense', description: bill.isCardInvoice ? `Pagamento ${bill.title}` : billDisplayTitle(bill), amount: paidAmount, date: todayISO(), category: bill.category, account: '', note: `Pagamento da conta com vencimento em ${dateBR(bill.dueDate)}`, source: bill.isCardInvoice ? 'card-payment' : '', linkedBillId: bill.id, createdAt: new Date().toISOString() });
         if (bill.kind === 'fixed') {
           const nextDate = addMonths(bill.dueDate, 1);
           const exists = state.bills.some(b => b.seriesId === bill.seriesId && b.dueDate === nextDate);
@@ -1926,7 +1941,7 @@
         const date = bill.dueDate.replace(/-/g,'');
         const next = new Date(parseDate(bill.dueDate).getTime()+86400000);
         const nextDate = `${next.getFullYear()}${String(next.getMonth()+1).padStart(2,'0')}${String(next.getDate()).padStart(2,'0')}`;
-        return ['BEGIN:VEVENT',`UID:${bill.id}@minhas-financas-offline`,`DTSTAMP:${new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'')}`,`DTSTART;VALUE=DATE:${date}`,`DTEND;VALUE=DATE:${nextDate}`,`SUMMARY:${icsEscape(`Pagar ${bill.title} — ${billAmountText(bill)}`)}`,`DESCRIPTION:${icsEscape(`Categoria: ${bill.category}${bill.note ? `\\n${bill.note}` : ''}`)}`,'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:Conta próxima do vencimento','TRIGGER:-P1D','END:VALARM','END:VEVENT'].join('\r\n');
+        return ['BEGIN:VEVENT',`UID:${bill.id}@minhas-financas-offline`,`DTSTAMP:${new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'')}`,`DTSTART;VALUE=DATE:${date}`,`DTEND;VALUE=DATE:${nextDate}`,`SUMMARY:${icsEscape(`Pagar ${billDisplayTitle(bill)} — ${billAmountText(bill)}`)}`,`DESCRIPTION:${icsEscape(`Categoria: ${bill.category}${bill.note ? `\\n${bill.note}` : ''}`)}`,'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:Conta próxima do vencimento','TRIGGER:-P1D','END:VALARM','END:VEVENT'].join('\r\n');
       }
       function exportCalendar(bills = null) {
         const list = (bills || state.bills.filter(b => b.status !== 'paid')).sort((a,b) => a.dueDate.localeCompare(b.dueDate));
@@ -2017,7 +2032,7 @@
         if (target.dataset.editBill) { const bill = state.bills.find(b => b.id === target.dataset.editBill); if (bill) openDialog('bill', bill); }
         if (target.dataset.deleteBill) {
           const bill = state.bills.find(b => b.id === target.dataset.deleteBill); if (!bill) return;
-          askConfirm('Excluir conta?', `A conta “${bill.title}” será removida.`, () => { const linked = state.transactions.find(t => t.linkedBillId === bill.id); if (linked) delete linked.linkedBillId; state.bills = state.bills.filter(b => b.id !== bill.id); saveState(); renderAll(); showToast('Conta excluída.'); }, 'Excluir');
+          askConfirm('Excluir conta?', `A conta “${billDisplayTitle(bill)}” será removida.`, () => { const linked = state.transactions.find(t => t.linkedBillId === bill.id); if (linked) delete linked.linkedBillId; state.bills = state.bills.filter(b => b.id !== bill.id); saveState(); renderAll(); showToast('Conta excluída.'); }, 'Excluir');
         }
         if (target.dataset.editCard) { const card = state.cards.find(c => c.id === target.dataset.editCard); if (card) openDialog('card', card); }
         if (target.dataset.deleteCard) {
