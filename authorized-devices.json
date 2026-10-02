@@ -73,12 +73,6 @@
       "label": "DANIEL PC",
       "active": true,
       "expiresAt": null
-    },
-    {
-      "hash": "7d0188ab9e825356fb718fb6af5cd95dbabee0450873a95153c9cbb0d20fc58c",
-      "label": "Samuel",
-      "active": true,
-      "expiresAt": null
     }
   ]
 }
